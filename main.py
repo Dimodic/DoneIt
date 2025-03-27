@@ -1,7 +1,7 @@
-from contextlib import asynccontextmanager
-from typing import Generator, List, Optional
-from fastapi import FastAPI, Depends, HTTPException, Query, Body
+from fastapi import FastAPI, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
+from contextlib import asynccontextmanager
+
 from app import models, schemas, crud, database
 
 
@@ -14,7 +14,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 
-def get_db():
+def get_db() -> Session:
     db = database.SessionLocal()
     try:
         yield db
@@ -23,23 +23,29 @@ def get_db():
 
 
 @app.post("/tasks/", response_model=schemas.TaskOut)
-def create_task(task: schemas.TaskCreate = Body(...), db: Session = Depends(get_db)) -> schemas.TaskOut:
+def create_task(task: schemas.TaskCreate, db: Session = Depends(get_db)) -> schemas.TaskOut:
     return crud.create_task(db, task)
 
 
-@app.get("/tasks/", response_model=List[schemas.TaskOut])
-def read_tasks(sort_by: Optional[str] = Query(None), order: str = Query("asc"), db: Session = Depends(get_db)) -> List[
-    schemas.TaskOut]:
+@app.get("/tasks/", response_model=list[schemas.TaskOut])
+def read_tasks(
+        sort_by: str = Query(None),
+        order: str = Query("asc"),
+        db: Session = Depends(get_db)
+) -> list[schemas.TaskOut]:
     return crud.get_tasks(db, sort_by, order)
 
 
-@app.get("/tasks/top", response_model=List[schemas.TaskOut])
-def get_top_tasks(top_n: int = Query(5), db: Session = Depends(get_db)) -> List[schemas.TaskOut]:
+@app.get("/tasks/top", response_model=list[schemas.TaskOut])
+def get_top_tasks(
+        top_n: int = Query(5),
+        db: Session = Depends(get_db)
+) -> list[schemas.TaskOut]:
     return crud.get_top_tasks(db, top_n)
 
 
-@app.get("/tasks/search", response_model=List[schemas.TaskOut])
-def search_tasks(query: str, db: Session = Depends(get_db)) -> List[schemas.TaskOut]:
+@app.get("/tasks/search", response_model=list[schemas.TaskOut])
+def search_tasks(query: str, db: Session = Depends(get_db)) -> list[schemas.TaskOut]:
     return crud.search_tasks(db, query)
 
 
@@ -52,7 +58,11 @@ def read_task(task_id: int, db: Session = Depends(get_db)) -> schemas.TaskOut:
 
 
 @app.put("/tasks/{task_id}", response_model=schemas.TaskOut)
-def update_task(task_id: int, task: schemas.TaskUpdate, db: Session = Depends(get_db)) -> schemas.TaskOut:
+def update_task(
+        task_id: int,
+        task: schemas.TaskUpdate,
+        db: Session = Depends(get_db)
+) -> schemas.TaskOut:
     updated_task = crud.update_task(db, task_id, task)
     if not updated_task:
         raise HTTPException(status_code=404, detail="Task not found")
