@@ -1,16 +1,18 @@
-from app import models
+from typing import List, Optional
+from sqlalchemy.orm import Session
+from app import models, schemas
 
-def create_task(db, task):
+def create_task(db: Session, task: schemas.TaskCreate) -> models.Task:
     db_task = models.Task(**task.dict())
     db.add(db_task)
     db.commit()
     db.refresh(db_task)
     return db_task
 
-def get_task(db, task_id):
+def get_task(db: Session, task_id: int) -> Optional[models.Task]:
     return db.query(models.Task).filter(models.Task.id == task_id).first()
 
-def get_tasks(db, sort_by=None, order="asc"):
+def get_tasks(db: Session, sort_by: Optional[str] = None, order: str = "asc") -> List[models.Task]:
     mapping = {
         "title": models.Task.title,
         "status": models.Task.status,
@@ -22,7 +24,7 @@ def get_tasks(db, sort_by=None, order="asc"):
         query = query.order_by(column.desc() if order == "desc" else column.asc())
     return query.all()
 
-def update_task(db, task_id, task):
+def update_task(db: Session, task_id: int, task: schemas.TaskUpdate) -> Optional[models.Task]:
     db_task = get_task(db, task_id)
     if not db_task:
         return None
@@ -32,17 +34,17 @@ def update_task(db, task_id, task):
     db.refresh(db_task)
     return db_task
 
-def delete_task(db, task_id):
+def delete_task(db: Session, task_id: int) -> Optional[models.Task]:
     db_task = get_task(db, task_id)
     if db_task:
         db.delete(db_task)
         db.commit()
     return db_task
 
-def get_top_tasks(db, top_n):
+def get_top_tasks(db: Session, top_n: int) -> List[models.Task]:
     return db.query(models.Task).order_by(models.Task.priority.desc()).limit(top_n).all()
 
-def search_tasks(db, query):
+def search_tasks(db: Session, query: str) -> List[models.Task]:
     all_tasks = db.query(models.Task).all()
     query_lower = query.lower()
     return [
